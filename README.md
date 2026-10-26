@@ -40,9 +40,12 @@ Inventory-app/
 │   ├── style.css               # Responsive Slate SaaS Styling
 │   └── script.js               # Vanilla JS Fetch API & DOM Controller
 │
+├── api/                        # Vercel Serverless Function entry
+│   └── index.js
 ├── server.js                   # Express.js REST API Server & Supabase Client
 ├── schema.sql                  # PostgreSQL Schema & Sample Seed Data
 ├── package.json                # Project Dependencies & Scripts
+├── vercel.json                 # Vercel Serverless & CDN Routing Config
 ├── .env.example                # Example environment variables
 ├── .env                        # Local Environment Configuration (Private)
 └── README.md                   # Documentation & Setup Guide
@@ -96,6 +99,18 @@ npm run dev
 
 Open your browser and visit:
 👉 **[http://localhost:3000](http://localhost:3000)**
+
+---
+
+## 🌐 Deploy to Vercel
+
+1. Push your repository to GitHub.
+2. Sign in to [Vercel](https://vercel.com/) and click **Add New...** -> **Project**.
+3. Import your GitHub repository (`Inventory-app`).
+4. In the **Environment Variables** section, add your Supabase credentials:
+   - `SUPABASE_URL`: Your Supabase Project URL
+   - `SUPABASE_ANON_KEY`: Your Supabase Public Anon Key
+5. Click **Deploy**. Vercel will host both your frontend static assets and serverless REST API automatically!
 
 ---
 

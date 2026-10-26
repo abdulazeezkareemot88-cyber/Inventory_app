@@ -306,14 +306,20 @@ app.get('*', (req, res, next) => {
   }
 });
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`=================================================`);
-  console.log(`🚀 Inventory Management Server is running!`);
-  console.log(`🌐 Local URL: http://localhost:${PORT}`);
-  console.log(`📊 Database Status: ${isSupabaseConfigured ? 'Supabase Connected' : 'Supabase Not Configured'}`);
-  if (!isSupabaseConfigured) {
-    console.log(`⚠️  Please add SUPABASE_URL & SUPABASE_ANON_KEY to .env`);
-  }
-  console.log(`=================================================`);
-});
+// Start Server (only when run directly or not on Vercel)
+if (require.main === module && !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`=================================================`);
+    console.log(`🚀 Inventory Management Server is running!`);
+    console.log(`🌐 Local URL: http://localhost:${PORT}`);
+    console.log(`📊 Database Status: ${isSupabaseConfigured ? 'Supabase Connected' : 'Supabase Not Configured'}`);
+    if (!isSupabaseConfigured) {
+      console.log(`⚠️  Please add SUPABASE_URL & SUPABASE_ANON_KEY to .env`);
+    }
+    console.log(`=================================================`);
+  });
+}
+
+// Export app for Vercel serverless deployment
+module.exports = app;
+
