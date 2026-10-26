@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CoreStock - Professional Inventory Management System</title>
+  <meta name="description" content="A modern, responsive Inventory Management System built with HTML, CSS, JavaScript, Express, and Supabase PostgreSQL." />
+  
+  <!-- Font Awesome & Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-layout">
+    
+    <!-- SIDEBAR NAVIGATION -->
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-logo">
+          <i class="fa-solid fa-boxes-stacked"></i>
+        </div>
+        <div class="brand-info">
+          <h2>CoreStock</h2>
+          <span>Inventory Cloud</span>
+        </div>
+        <button class="btn-close-sidebar" id="closeSidebarBtn" aria-label="Close Sidebar">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <nav class="nav-menu">
+        <div class="nav-group-title">MAIN MENU</div>
+        <a href="#dashboard" class="nav-item active" id="navDashboard">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="#inventory" class="nav-item" id="navInventory">
+          <i class="fa-solid fa-box-archive"></i>
+          <span>Inventory Table</span>
+          <span class="badge-count" id="sidebarProductCount">0</span>
+        </a>
+        <a href="#low-stock" class="nav-item" id="navLowStock">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span>Low Stock Alert</span>
+          <span class="badge-alert" id="sidebarLowStockCount">0</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-status-box">
+        <div class="status-header">
+          <span class="status-indicator" id="dbStatusDot"></span>
+          <span class="status-text" id="dbStatusText">Checking DB...</span>
+        </div>
+        <p class="status-sub" id="dbStatusSub">Supabase PostgreSQL</p>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="user-profile">
+          <div class="avatar">
+            <i class="fa-solid fa-user-shield"></i>
+          </div>
+          <div class="user-details">
+            <p class="user-name">Inventory Admin</p>
+            <span class="user-role">PostgreSQL Realtime</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <div class="main-wrapper">
+      
+      <!-- TOP HEADER -->
+      <header class="top-header">
+        <div class="header-left">
+          <button class="btn-icon mobile-menu-toggle" id="openSidebarBtn" aria-label="Open Menu">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="page-title-wrap">
+            <h1 id="pageHeading">Inventory Dashboard</h1>
+            <p class="page-subtitle">Real-time stock tracking, product analytics & database management</p>
+          </div>
+        </div>
+
+        <div class="header-right">
+          <button class="btn btn-secondary" id="refreshBtn" title="Sync with Supabase">
+            <i class="fa-solid fa-rotate"></i>
+            <span>Refresh</span>
+          </button>
+          <button class="btn btn-primary" id="openAddModalBtn">
+            <i class="fa-solid fa-plus"></i>
+            <span>Add Product</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- DATABASE SETUP WARNING BANNER (Shows only if Supabase credentials are missing) -->
+      <div class="db-banner hidden" id="dbBanner">
+        <div class="db-banner-content">
+          <i class="fa-solid fa-circle-exclamation db-banner-icon"></i>
+          <div>
+            <h4>Supabase Connection Required</h4>
+            <p>Please enter your <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> inside your project's <code>.env</code> file, run the schema in <code>schema.sql</code>, and restart the server.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAIN BODY CONTAINER -->
+      <main class="content-container">
+
+        <!-- 1. DASHBOARD METRICS CARDS -->
+        <section class="stats-grid" id="dashboardSection">
+          
+          <!-- Card 1: Total Products -->
+          <div class="stat-card">
+            <div class="stat-icon-wrapper blue">
+              <i class="fa-solid fa-box"></i>
+            </div>
+            <div class="stat-content">
+              <span class="stat-label">Total Products</span>
+              <h3 class="stat-value" id="statTotalProducts">0</h3>
+              <div class="stat-meta">
+                <span class="stat-tag tag-blue"><i class="fa-solid fa-layer-group"></i> Unique SKUs</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Total Stock Units -->
+          <div class="stat-card">
+            <div class="stat-icon-wrapper green">
+              <i class="fa-solid fa-cubes-stacked"></i>
+            </div>
+            <div class="stat-content">
+              <span class="stat-label">Total Stock Quantity</span>
+              <h3 class="stat-value" id="statTotalStock">0</h3>
+              <div class="stat-meta">
+                <span class="stat-tag tag-green"><i class="fa-solid fa-arrow-trend-up"></i> Units in warehouse</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Low Stock Alerts (<5) -->
+          <div class="stat-card alert-card">
+            <div class="stat-icon-wrapper amber">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div class="stat-content">
+              <span class="stat-label">Low Stock Products</span>
+              <h3 class="stat-value text-amber" id="statLowStock">0</h3>
+              <div class="stat-meta">
+                <span class="stat-tag tag-amber"><i class="fa-solid fa-circle-info"></i> Quantity &lt; 5 units</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4: Total Inventory Value -->
+          <div class="stat-card">
+            <div class="stat-icon-wrapper purple">
+              <i class="fa-solid fa-dollar-sign"></i>
+            </div>
+            <div class="stat-content">
+              <span class="stat-label">Total Inventory Value</span>
+              <h3 class="stat-value text-purple" id="statTotalValue">\$0.00</h3>
+              <div class="stat-meta">
+                <span class="stat-tag tag-purple"><i class="fa-solid fa-calculator"></i> Price × Quantity</span>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- 2. INVENTORY MANAGEMENT SECTION -->
+        <section class="table-section" id="inventorySection">
+          
+          <!-- Filter and Search Toolbar -->
+          <div class="table-toolbar">
+            <div class="search-box">
+              <i class="fa-solid fa-magnifying-glass search-icon"></i>
+              <input
+                type="text"
+                id="searchInput"
+                placeholder="Search by product name, category, or ID..."
+                autocomplete="off"
+              />
+              <button class="btn-clear-search hidden" id="clearSearchBtn" title="Clear Search">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+
+            <div class="toolbar-actions">
+              <!-- Category Filter -->
+              <div class="filter-dropdown">
+                <select id="categoryFilter" aria-label="Filter by category">
+                  <option value="ALL">All Categories</option>
+                </select>
+              </div>
+
+              <!-- Low Stock Quick Toggle -->
+              <button class="btn btn-filter" id="filterLowStockBtn">
+                <i class="fa-solid fa-filter"></i>
+                <span>Low Stock Only</span>
+              </button>
+
+              <!-- Export CSV Button -->
+              <button class="btn btn-secondary" id="exportCsvBtn" title="Export Inventory to CSV">
+                <i class="fa-solid fa-file-arrow-down"></i>
+                <span>Export CSV</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Active Filter indicator pills -->
+          <div class="active-filters-bar hidden" id="activeFiltersBar">
+            <span class="filter-label">Active Filters:</span>
+            <div class="filter-chips" id="filterChipsContainer"></div>
+            <button class="btn-text-clear" id="resetAllFiltersBtn">Reset All</button>
+          </div>
+
+          <!-- Table Container with Loading and Empty States -->
+          <div class="table-wrapper">
+            <table class="inventory-table" id="inventoryTable">
+              <thead>
+                <tr>
+                  <th class="th-sortable" data-sort="name">
+                    <span>Product</span> <i class="fa-solid fa-sort"></i>
+                  </th>
+                  <th class="th-sortable" data-sort="category">
+                    <span>Category</span> <i class="fa-solid fa-sort"></i>
+                  </th>
+                  <th class="th-sortable" data-sort="quantity">
+                    <span>Quantity</span> <i class="fa-solid fa-sort"></i>
+                  </th>
+                  <th class="th-sortable" data-sort="price">
+                    <span>Unit Price</span> <i class="fa-solid fa-sort"></i>
+                  </th>
+                  <th>Total Value</th>
+                  <th>Description</th>
+                  <th class="th-actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="productsTableBody">
+                <!-- Dynamically populated rows via JavaScript -->
+              </tbody>
+            </table>
+
+            <!-- Loading Spinner State -->
+            <div class="state-container hidden" id="tableLoadingState">
+              <div class="spinner"></div>
+              <p>Fetching inventory from Supabase...</p>
+            </div>
+
+            <!-- Empty State (No Products Found) -->
+            <div class="state-container hidden" id="tableEmptyState">
+              <div class="state-icon">
+                <i class="fa-solid fa-box-open"></i>
+              </div>
+              <h3 id="emptyStateTitle">No Products Found</h3>
+              <p id="emptyStateDescription">There are no products matching your search criteria or the database is empty.</p>
+              <button class="btn btn-primary" id="emptyStateAddBtn">
+                <i class="fa-solid fa-plus"></i> Add Your First Product
+              </button>
+            </div>
+          </div>
+
+          <!-- Table Footer / Pagination / Row Count -->
+          <div class="table-footer">
+            <div class="table-info">
+              Showing <span id="visibleCount">0</span> of <span id="totalCount">0</span> products
+            </div>
+          </div>
+
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODALS -->
+  <!-- ========================================== -->
+
+  <!-- ADD / EDIT PRODUCT MODAL -->
+  <div class="modal-backdrop hidden" id="productModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-badge-icon" id="modalHeaderIcon">
+            <i class="fa-solid fa-plus"></i>
+          </div>
+          <div>
+            <h2 id="modalTitle">Add New Product</h2>
+            <p class="modal-sub" id="modalSubtitle">Fill in the details below to add to Supabase inventory</p>
+          </div>
+        </div>
+        <button class="btn-modal-close" id="closeModalBtn" aria-label="Close modal">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="productForm" novalidate>
+        <input type="hidden" id="productId" name="id" value="" />
+
+        <div class="modal-body">
+          
+          <!-- Product Name -->
+          <div class="form-group">
+            <label for="productName">Product Name <span class="required">*</span></label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-tag"></i>
+              <input
+                type="text"
+                id="productName"
+                name="name"
+                placeholder="e.g. Wireless Ergonomic Mouse"
+                required
+                maxlength="255"
+              />
+            </div>
+            <span class="field-error" id="nameError"></span>
+          </div>
+
+          <!-- Category -->
+          <div class="form-group">
+            <label for="productCategory">Category <span class="required">*</span></label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-folder-tree"></i>
+              <input
+                type="text"
+                id="productCategory"
+                name="category"
+                list="categorySuggestions"
+                placeholder="e.g. Electronics, Furniture, Audio"
+                required
+                maxlength="100"
+              />
+              <datalist id="categorySuggestions">
+                <option value="Electronics"></option>
+                <option value="Audio"></option>
+                <option value="Furniture"></option>
+                <option value="Accessories"></option>
+                <option value="Lighting"></option>
+                <option value="Cables"></option>
+                <option value="Kitchen"></option>
+                <option value="Office Supplies"></option>
+              </datalist>
+            </div>
+            <span class="field-error" id="categoryError"></span>
+          </div>
+
+          <!-- Quantity and Price Row -->
+          <div class="form-row-2">
+            <!-- Quantity -->
+            <div class="form-group">
+              <label for="productQuantity">Quantity <span class="required">*</span></label>
+              <div class="input-with-icon">
+                <i class="fa-solid fa-boxes-stacked"></i>
+                <input
+                  type="number"
+                  id="productQuantity"
+                  name="quantity"
+                  placeholder="0"
+                  min="0"
+                  step="1"
+                  required
+                />
+              </div>
+              <small class="helper-text">Values &lt; 5 trigger low stock warnings</small>
+              <span class="field-error" id="quantityError"></span>
+            </div>
+
+            <!-- Price -->
+            <div class="form-group">
+              <label for="productPrice">Unit Price ($) <span class="required">*</span></label>
+              <div class="input-with-icon">
+                <i class="fa-solid fa-dollar-sign"></i>
+                <input
+                  type="number"
+                  id="productPrice"
+                  name="price"
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                  required
+                />
+              </div>
+              <small class="helper-text">USD Currency value</small>
+              <span class="field-error" id="priceError"></span>
+            </div>
+          </div>
+
+          <!-- Description -->
+          <div class="form-group">
+            <label for="productDescription">Description <span class="optional">(Optional)</span></label>
+            <textarea
+              id="productDescription"
+              name="description"
+              rows="3"
+              placeholder="Enter product specifications, features, or notes..."
+              maxlength="1000"
+            ></textarea>
+            <span class="field-error" id="descriptionError"></span>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="cancelModalBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveProductBtn">
+            <i class="fa-solid fa-floppy-disk"></i>
+            <span id="saveBtnText">Save Product</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- DELETE CONFIRMATION MODAL -->
+  <div class="modal-backdrop hidden" id="deleteModal">
+    <div class="modal-container modal-sm">
+      <div class="modal-header border-0">
+        <div class="modal-badge-icon delete-icon">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <button class="btn-modal-close" id="closeDeleteModalBtn" aria-label="Close delete modal">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body text-center">
+        <h3>Delete Product</h3>
+        <p class="delete-warning-text">
+          Are you sure you want to permanently delete <strong id="deleteProductName">this product</strong>?
+        </p>
+        <p class="delete-subtext">This action cannot be undone and will delete the record from Supabase PostgreSQL.</p>
+      </div>
+
+      <div class="modal-footer justify-center">
+        <button type="button" class="btn btn-secondary" id="cancelDeleteBtn">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+          <i class="fa-solid fa-trash-can"></i>
+          <span>Delete Product</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATIONS CONTAINER -->
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+  <!-- APP JAVASCRIPT -->
+  <script src="script.js"></script>
+</body>
+</html>
